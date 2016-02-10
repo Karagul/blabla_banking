@@ -1,0 +1,24 @@
+ Pandas dataframe might be one of the best and most frequently used data structure in python data analyzing.As we know, trasactional data is often 
+ saved in SQL databases, and analysts are more exposed to excel tables than sql databases because they  are often treated more as 
+ business people than IT people.However, this doesn't mean that data analysts show any weakness in data structure things, and 
+ python pandas serves them as the best playground.
+ 
+step 1:import excel into python as dataframe
+code :
+import pandas as pd
+#read in customer.xlsx as dataframe
+df = pd.read_excel("customer.xlsx")
+#load in the first line
+df.head()
+
+Here we generate an example dataframe:
+ data = pd.DataFrame({'name':['cyrus'] * 3 + ['yolanda'] * 4,'daily_amount':[1, 1, 2, 3, 3, 4, 4]})
+ output:
+    daily_amount     name
+0             1    cyrus
+1             1    cyrus
+2             2    cyrus
+3             3  yolanda
+4             3  yolanda
+5             4  yolanda
+6             4  yolanda
