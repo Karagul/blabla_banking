@@ -1,0 +1,340 @@
+#this program aims to set up staffing modelling process for my bank.At this
+#moment I am just a bit sick of documentation, so please excuse me for posting 
+#pure codes here(which I do believe sucks...I think not too many programmer likes 
+#to redo documentation after they finish all the work)
+
+# coding: utf-8
+from __future__ import division
+import os
+import sys
+import csv
+import numpy as np
+import pandas as pd
+import datetime,time
+import	random
+import matplotlib as plt
+from matplotlib.pyplot import plot,savefig 
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.dates as mdates
+import pylab
+from pylab import *
+import datetime as dt
+from scipy import stats
+import statsmodels.api as sm
+from statsmodels.graphics.api import qqplot
+from sklearn import tree
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import precision_recall_curve  
+from sklearn.metrics import classification_report  
+from sklearn.cross_validation import train_test_split  
+
+
+sys.stdout = open("result.log", "w")
+file_path=os.path.split(os.path.abspath(sys.argv[0]))[0]
+data_path=file_path+'/data/'
+result_path=file_path+'/result/'
+
+################################################################
+def generate_data(branch_info_count,emp_info_count,transaction_days,trainee_info_count):
+	branch_info_count=int(branch_info_count)
+	branch_info= pd.DataFrame(index=np.arange(0, branch_info_count),columns=('id','area','type'))
+                         
+	for x in np.arange(0, branch_info_count):
+		branch_info.loc[x]=[np.arange(20130,20130+branch_info_count)[x],np.random.randint(1,3),np.random.randint(1,3)]
+	branch_info.to_csv(data_path+'branch_info.csv')
+ 
+#create manager and officers info csv
+#number of managers= 2* number of branch/department 
+	manager_info_count=2*branch_info_count
+	manager_info= pd.DataFrame(index=np.arange(0, manager_info_count), columns=('id','age','home','sex','education','type'))
+		
+	for x in np.arange(0, manager_info_count):
+		manager_info.loc[x]=[np.arange(30100,30100+manager_info_count)[x],np.random.randint(20,55),np.random.randint(0,100),np.random.randint(1,2),np.random.randint(1,5),np.random.randint(1,5)]
+	manager_info.to_csv(data_path+'manager_info.csv')
+
+	#create employee info csv
+	emp_info_count=int(emp_info_count)
+	emp_info= pd.DataFrame(index=np.arange(0, emp_info_count), columns=('id','hired_period','age','home','sex','education','personality_type','stress','exams','type','tag'))
+
+#type 1:teller   type 2:back office		
+	for x in np.arange(0, emp_info_count):
+ 	   emp_info.loc[x] = [np.arange(47400, 47400+emp_info_count)[x],np.random.randint(0,40) ,np.random.randint(20,55) ,np.random.randint(0,100) ,np.random.randint(1,2),np.random.randint(1,5),np.random.randint(1,5),np.random.randint(1,5),np.random.randint(30,100),np.random.randint(1,2),np.random.randint(1,2)]
+	emp_info.to_csv(data_path+'employee_info.csv')
+
+	transaction_days=int(transaction_days)
+	dates=pd.date_range(start='20140101',periods=transaction_days)
+	transaction_info=pd.DataFrame(index=np.arange(0, emp_info_count), 	columns=('Date','id','branch_id','transaction_count'))
+
+	count=0
+	for i in np.arange(0, transaction_days):	
+		for j in np.arange(0, emp_info_count):
+			transaction_info.loc[count] = [dates[i],np.arange(47400, 47400+emp_info_count)[j],np.random.randint(20130,20130+branch_info_count),np.random.randint(50,350)]
+			count+=1
+	transaction_info.to_csv(data_path+'transactions.csv')
+
+#create sales ability info
+#Note:sales_earn= extra_earn - transactions_earn
+
+	months=pd.date_range('20140101',dates[-1],freq='BM')
+	emp_sales= pd.DataFrame(index=np.arange(0, len(months)),columns=('month','id','monthly_sales_earn'))
+	count_2=0
+	for i in np.arange(0, len(months)):	
+		for j in np.arange(0, emp_info_count):
+			emp_sales.loc[count_2] = [months[i],np.arange(47400, 47400+emp_info_count)[j],np.random.randint(-3000,3000)]
+			count_2 += 1
+	emp_sales.to_csv(data_path+'emp_sales.csv')
+
+#create trainee info csv
+	trainee_info_count=int(trainee_info_count)
+	trainee_info= pd.DataFrame(index=np.arange(0, trainee_info_count), 
+	columns=('id','hired_period','age','home','sex','education','personality_type','stress','exams'))
+		
+	for x in np.arange(0, trainee_info_count):
+		trainee_info.loc[x] = [np.arange(80100, 80100+trainee_info_count)[x],0,np.random.randint(18,35) ,np.random.randint(0,100),np.random.randint(1,2),np.random.randint(1,5),np.random.randint(1,5),np.random.randint(1,100),np.random.randint(1,100)]
+	trainee_info.to_csv(data_path+'trainee_info.csv')
+
+##########################################################
+def descriptive_statistics():
+	
+	pp_branch_aggre = PdfPages(result_path+'branch_aggre_transactions.pdf')
+    
+	for row in branch_info.iterrows():
+		branch_id=row[1]['id']
+		temp=aggre_branch_date[aggre_branch_date['branch_id']==branch_id]
+		temp_date = temp.set_index('Date')
+		plt.figure()
+		plt.clf()
+		temp_date['transaction_count'].plot()
+		plt.title(branch_id)
+		pp_branch_aggre.savefig()
+	pp_branch_aggre.close()	
+
+	pp_emp = PdfPages(result_path+'employee_transactions.pdf')   
+	for row in employee_info.iterrows():
+		emp_id=row[1]['id']
+		temp=rearrange_sort_merged[rearrange_sort_merged['id']==emp_id]
+		temp_date = temp.set_index('Date')
+		plt.figure()
+		plt.clf()
+		temp_date['share'].plot()
+		plt.title(emp_id)
+		pp_emp.savefig()
+	pp_emp.close()	
+##############################################################
+
+
+def tsa_analysis(tsa_result,id,a,b,c,p_days):
+	branch_count=0
+	for row in branch_info.iterrows():
+		branch_count += 1
+	for i in np.arange(0,branch_count):
+		id=branch_info['id'].iloc[i]
+		temp_data=aggre_branch_date[aggre_branch_date['branch_id']==id]
+		temp_data.to_csv(data_path+'/temp.csv')
+		temp=pd.read_csv(data_path+'/temp.csv')
+		bottom=temp.tail(1).iloc[0]
+		start=str(bottom['Date'])
+		startDate = datetime.datetime.strptime(str(start),'%Y-%m-%d')
+		endDate=startDate + datetime.timedelta(days=p_days)
+		t=time.strptime(str(endDate),"%Y-%m-%d %H:%M:%S")
+		end=str(t.tm_year)+'-'+str(t.tm_mon)+'-'+str(t.tm_mday)		
+		#plotting first
+		fig = plt.figure(figsize=(12,8))
+		ax1 = fig.add_subplot(211)
+		fig = sm.graphics.tsa.plot_acf(temp_data['transaction_count'].values.squeeze(), lags=40, ax=ax1)
+		ax2 = fig.add_subplot(212)
+		fig = sm.graphics.tsa.plot_pacf(temp_data['transaction_count'], lags=40, ax=ax2)	
+		tsa_result.savefig()
+		#arima is a bit difficult for prediction, maybe I can try using arma models
+		print("coz arima is a bit difficult for prediction in python , so we will try arma first")
+		arma_mod_ac = sm.tsa.ARMA(temp_data['transaction_count'], (a,c)).fit()
+		print(arma_mod_ac.summary())
+		print("parameter estimation for ARMA model : ARMA("+str(a)+" , "+str(c)+" ) are as follows:")
+		print(arma_mod_ac.params)
+		print("ARMA model selection criteria is valued as follows:")
+		print("(   AIC  , BIC  ,  HQIC  )")
+		print(arma_mod_ac.aic, arma_mod_ac.bic, arma_mod_ac.hqic)
+		print("now we check the (durbin watson )residue to see whether the model obeys the rule")		
+		print(sm.stats.durbin_watson(arma_mod_ac.resid.values))
+		fig2 = plt.figure(figsize=(12,8))
+		ax = fig2.add_subplot(111)
+		ax = arma_mod_ac.resid.plot(ax=ax)
+		tsa_result.savefig()
+		resid_arma = arma_mod_ac.resid
+		print("We need to check the residue to see whether the model obey the theory")
+		print("normal test for arma residue:")
+		print(stats.normaltest(resid_arma))
+		r1,q1,p1 = sm.tsa.acf(resid_arma.values.squeeze(), qstat=True)
+		data = np.c_[range(1,41), r1[1:], q1, p1]
+		table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
+		print(table.set_index('lag'))
+		fig3 = plt.figure(figsize=(12,8))
+		ax = fig3.add_subplot(111)
+		fig3 = qqplot(resid_arma, line='q', ax=ax, fit=True)
+		tsa_result.savefig()
+		print("ARMA prediction for transaction counts are as follows:")
+		#print(arma_mod_ac.predict(start,end, dynamic=True))
+		#arima
+		print("-------now we will do arima modelling to see whether there will be interesting results")
+		m = sm.tsa.ARIMA(temp_data['transaction_count'],(a,b,c)).fit()
+		print(m.params)
+		print(m.summary())
+		print("ARIMA model selection criteria is valued as follows")
+		print("(   AIC  , BIC  ,  HQIC  )")
+		print(m.aic, m.bic, m.hqic)
+		resid_arima =m.resid
+		print("We need to check the residue to see whether the model obey the theory")
+		print("normal test for arima residue:")
+		print(stats.normaltest(resid_arima))
+		#residue plot for arima
+		fig5 = plt.figure(figsize=(12,8))
+		ax = fig5.add_subplot(111)
+		ax = m.resid.plot(ax=ax)
+		tsa_result.savefig()		
+		#qq plot for arima
+		r2,q2,p2 = sm.tsa.acf(resid_arima.values.squeeze(), qstat=True)
+		data2 = np.c_[range(1,41), r2[1:], q2, p2]
+		table2 = pd.DataFrame(data2, columns=['lag', "AC", "Q", "Prob(>Q)"])
+		print(table2.set_index('lag'))
+		fig4 = plt.figure(figsize=(12,8))
+		ax = fig4.add_subplot(111)
+		fig4 = qqplot(resid_arima, line='q', ax=ax, fit=True)	
+		tsa_result.savefig()
+		print("Prediction for transaction counts are as follows:")
+		#print(m.predict(start,end, dynamic=True))
+		print("***********************************************")
+
+############################################################
+def dt(x,y):
+	print("start of decision tree analysis")
+	tag=x['tag']
+	del x['tag']
+	clf_1 = DecisionTreeRegressor(max_depth=2)
+	clf_2 = DecisionTreeRegressor(max_depth=5)
+	clf_1.fit(x,tag)
+	clf_2.fit(x,tag)
+	names=list(x)
+	names_len=len(names)
+	print("Now we will how well trained model can fit testing set")
+	for row in y.iterrows():
+		print("prediction for trainee "+str(row[1]['id']))
+		target=[]
+		for i in np.arange(0, names_len):
+			name=names[i]
+			target.append(float(row[1][name]))
+		print(target)
+		p_1 = clf_1.predict(target)
+		p_2 = clf_2.predict(target)
+		print('depth_2 prediction is :')
+		print(p_1)
+		print('depth_5 prediction is :')
+		print(p_2)
+	
+###########################################################
+if __name__ == '__main__':
+	interface=pd.read_csv(file_path+'/interface.csv')
+	print('You have inputed answers as following:')
+	print(interface['Answer'])
+
+	if interface['Answer'].iloc[0]=='Y':
+		print("--If you can use Internet, an email will be sent to the developer and she will respond to you ASAP in the future.Unfortunately, this feather is still being implemented.Please look forward to it ")
+	else:
+		print("--It seems you don't need help for using this program,Great! If you have any problem later, please feel free to call 13927620982.")
+
+	if interface['Answer'].iloc[1]=='Y':
+		print("--This is the first time you use this program, so it will generate sample datasets for you for further analysis.")
+		generate_data(interface['Answer'].iloc[3],interface['Answer'].iloc[4],interface['Answer'].iloc[5],interface['Answer'].iloc[6])
+	if interface['Answer'].iloc[8]=='N' or interface['Answer'].iloc[9]=='N' or interface['Answer'].iloc[10]=='N' or interface['Answer'].iloc[11]=='N' :
+		print("--Information in this table is necessary for performing basic analysis.Could you  provide it?")
+		quit()
+	if interface['Answer'].iloc[12]=='Y' or interface['Answer'].iloc[13]=='Y' or interface['Answer'].iloc[14]=='Y' :
+		print("--Analysis of these tables will be provided in the next stage.If you need help, please contact 13927620982.Thank you")
+	if interface['Answer'].iloc[15]=='Y':
+		print("Time series analysis on amount of transactions in different branched will be carried out soon, thank you!")
+	if interface['Answer'].iloc[21]=='Y':
+		print("Analysis of statistical similarities between employees are being carried out,thank you")
+
+#I will load in data in this stage because they might be used for following analysis		
+	branch_info=pd.read_csv(data_path+'/branch_info.csv')
+	manager_info=pd.read_csv(data_path+'/manager_info.csv')
+	employee_info=pd.read_csv(data_path+'/employee_info.csv')
+	transactions=pd.read_csv(data_path+'/transactions.csv')
+	trainee_info=pd.read_csv(data_path+'/trainee_info.csv')
+	sort_transactions=transactions.sort(['branch_id','Date'], ascending=[1,1])
+
+	temp_aggre_branch_date=sort_transactions.groupby(['Date','branch_id']).sum()
+	temp_aggre_branch_date.to_csv(data_path+'aggre_branch_date.csv')
+	aggre_branch_date=pd.read_csv(data_path+'/aggre_branch_date.csv')
+	del aggre_branch_date['id']
+
+#print(aggre_branch_date)
+	merged=pd.merge(sort_transactions,aggre_branch_date,on=['Date','branch_id'])
+	sort_merged=merged.sort(['Date','branch_id'], ascending=[1,1])
+	del sort_merged['Unnamed: 0_y']
+	del sort_merged['Unnamed: 0_x']
+
+	def valuation_formula(x, y):
+ 	   return int(x)/int(y)
+
+	sort_merged['share'] = sort_merged.apply(lambda row: valuation_formula(row['transaction_count_x'], row['transaction_count_y']), axis=1)
+	sort_merged.to_csv(data_path+'sorted_merged.csv')
+	rearrange_sort_merged=pd.read_csv(data_path+'/sorted_merged.csv')
+	#print(rearrange_sort_merged)
+
+	descriptive_statistics()
+		
+	######now I will do time series analysis
+	aggre_branch_date.Date = pd.to_datetime(aggre_branch_date.Date)
+	aggre_branch_date.set_index('Date',inplace=True)
+	del aggre_branch_date['Unnamed: 0'] 
+	transaction_count=aggre_branch_date.loc[:,'transaction_count']
+
+	print("                                        ")
+	print("********************************************")
+	print("------time series analysis towards amount of trasactions of different branches are as follows")	
+	tsa_result=PdfPages(result_path+'tsa_results.pdf') 
+	branch_count=0
+	for row in branch_info.iterrows():
+		branch_count += 1
+	for i in np.arange(0,branch_count):
+		id=branch_info['id'].iloc[i]
+		tsa_analysis(tsa_result,id,int(interface['Answer'].iloc[16]),int(interface['Answer'].iloc[17]),int(interface['Answer'].iloc[18]),int(interface['Answer'].iloc[20]))	
+	tsa_result.close()
+
+	if interface['Answer'].iloc[21]=='Y':
+		specified_tsa_result=PdfPages(result_path+'specified_tsa_results.pdf') 
+		specified_tsa=pd.read_csv(file_path+'/specified_tsa_modelling.csv')
+		for row in specified_tsa.iterrows():
+			tsa_analysis(specified_tsa_result,int(row[1]['branch_id']),int(row[1]['p']),int(row[1]['d']),int(row[1]['q']),int(row[1]['prediction']))	
+		specified_tsa_result.close()
+	
+
+	print("                                        ")		
+	print("******multiple linear regression method will be applied according to your answers to Q6")
+	del employee_info['id']
+	del employee_info['hired_period']
+	del employee_info['type']
+	del employee_info['Unnamed: 0']
+	#print(employee_info)
+	#sex,age,address,exam,degree,personality,pressure
+	if interface['Answer'].iloc[23]=='N':
+		del employee_info['sex']
+		del trainee_info['sex']
+	if interface['Answer'].iloc[24]=='N':
+		del employee_info['address']
+		del trainee_info['address']
+	if interface['Answer'].iloc[25]=='N':
+		del employee_info['exam']
+		del trainee_info['exam']
+	if interface['Answer'].iloc[26]=='N':
+		del employee_info['degree']
+		del trainee_info['degree']
+	if interface['Answer'].iloc[27]=='N':
+		del employee_info['personality']
+		del trainee_info['personality']
+	if interface['Answer'].iloc[28]=='N':
+		del employee_info['pressure']
+		del trainee_info['pressure']
+	print(employee_info)
+	dt(employee_info,trainee_info)
+	#dt(employee_info,trainee_info)
