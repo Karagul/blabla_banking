@@ -22,3 +22,25 @@ Here we generate an example dataframe:
 4             3  yolanda
 5             4  yolanda
 6             4  yolanda
+
+step 2: cleansing
+scenario 1):
+we are usually unhappy with duplicates,thus dataframe provides us a method to discover them
+data.duplicated()
+output:
+0    False
+1     True
+2    False
+3    False
+4     True
+5    False
+6     True
+dtype: bool
+we can also use drop_duplicates() to return a dataframe without duplicates.
+data.drop_duplicates()
+output:
+   daily_amount     name
+0             1    cyrus
+2             2    cyrus
+3             3  yolanda
+5             4  yolanda
