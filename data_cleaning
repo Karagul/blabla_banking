@@ -44,3 +44,38 @@ output:
 2             2    cyrus
 3             3  yolanda
 5             4  yolanda
+Er,now we can get a cleaner dataframe,looks better, right?Actually we can delete duplicate rows based on a specific column, as follows:
+data.drop_duplicates(['name'])
+ output:
+ daily_amount     name
+0             1    cyrus
+3             3  yolanda
+
+scenario 2:
+Unfortunately, we often need to deal with missing values in datasets.For example, if data2 = pd.DataFrame([1., -999, 2., -999, -1000., 3.]),and negative 
+values stands for missing,then we can replace them with NAN using following method:
+import numpy as np
+data2.replace([-999,-1000],np.nan)
+  output:
+     0
+0   1
+1 NaN
+2   2
+3 NaN
+4 NaN
+5   3
+if we want to replace values with different values, replace() can be written as follows:
+data2.replace([-999, -1000], [np.nan, 0])   
+output:
+    0
+0   1
+1 NaN
+2   2
+3 NaN
+4   0
+5   3
+or 
+ data2.replace({-999: np.nan, -1000: 0})
+ we can see that output is the same.
+ 
+ 
