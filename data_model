@@ -1,0 +1,48 @@
+data structure I often use in analyzing.
+customer:
+	customer_id
+	customer_name
+	customer_mobile
+	customer_tel
+	customer_address
+	customer_city
+	customer_state
+	customer_country
+	customer_id_type
+	customer_id_no
+	customer_type
+	customer_age
+	customer_job
+	customer
+
+product
+	product_type
+ 	product_name
+
+account_info
+	customer_id
+	account_no
+	account_type
+	balance
+	deposit
+
+transaction_info
+	transaction_id
+	customer_id
+	accout_id
+	amount
+	transaction_type_id
+	status
+	operator
+	authorizer
+	time
+	channel
+
+walkin_visit
+	time
+	customer_id
+	customer_type
+	branch_id
+	
+
+	
